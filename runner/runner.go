@@ -1,33 +1,34 @@
 package runner
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"strconv"
+	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gotify/server/v2/config"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 // Run starts the http server and if configured a https server.
-func Run(router http.Handler, conf *config.Configuration) {
-	httpHandler := router
+func Run(engine *gin.Engine, conf *config.Configuration) {
+	var httpHandler http.Handler = engine
 
 	if *conf.Server.SSL.Enabled {
 		if *conf.Server.SSL.RedirectToHTTPS {
-			httpHandler = redirectToHTTPS(strconv.Itoa(conf.Server.SSL.Port))
+			httpHandler = redirectToHTTPS(string(conf.Server.SSL.Port))
 		}
 
 		addr := fmt.Sprintf("%s:%d", conf.Server.SSL.ListenAddr, conf.Server.SSL.Port)
 		s := &http.Server{
 			Addr:    addr,
-			Handler: router,
+			Handler: engine,
 		}
+		setKeepAlivePeriod(s, conf.Server.KeepAlivePeriodSeconds)
 
 		if *conf.Server.SSL.LetsEncrypt.Enabled {
 			certManager := autocert.Manager{
@@ -40,24 +41,35 @@ func Run(router http.Handler, conf *config.Configuration) {
 		}
 		fmt.Println("Started Listening for TLS connection on " + addr)
 		go func() {
-			listener := startListening(addr, conf.Server.KeepAlivePeriodSeconds)
-			log.Fatal(s.ServeTLS(listener, conf.Server.SSL.CertFile, conf.Server.SSL.CertKey))
+			log.Fatal(s.ListenAndServeTLS(conf.Server.SSL.CertFile, conf.Server.SSL.CertKey))
 		}()
 	}
 	addr := fmt.Sprintf("%s:%d", conf.Server.ListenAddr, conf.Server.Port)
 	fmt.Println("Started Listening for plain HTTP connection on " + addr)
 	server := &http.Server{Addr: addr, Handler: httpHandler}
+	setKeepAlivePeriod(server, conf.Server.KeepAlivePeriodSeconds)
 
-	log.Fatal(server.Serve(startListening(addr, conf.Server.KeepAlivePeriodSeconds)))
+	conn, err := net.Listen("tcp", addr)
+	if err != nil {
+		fmt.Println("Could not start http server", err)
+		os.Exit(1)
+	}
+
+	log.Fatal(server.Serve(conn))
 }
 
-func startListening(addr string, keepAlive int) net.Listener {
-	lc := net.ListenConfig{KeepAlive: time.Duration(keepAlive) * time.Second}
-	conn, err := lc.Listen(context.Background(), "tcp", addr)
-	if err != nil {
-		log.Fatalln("Could not listen on", addr, err)
+func setKeepAlivePeriod(srv *http.Server, periodSeconds int) {
+	if periodSeconds == 0 {
+		return
 	}
-	return conn
+
+	srv.ConnState = func(conn net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			if err := conn.(*net.TCPConn).SetKeepAlivePeriod(time.Duration(periodSeconds) * time.Second); err != nil {
+				fmt.Println("Could not set keep alive period", err)
+			}
+		}
+	}
 }
 
 func redirectToHTTPS(port string) http.HandlerFunc {
@@ -72,7 +84,7 @@ func redirectToHTTPS(port string) http.HandlerFunc {
 	}
 }
 
-func changePort(hostPort, port string) string {
+func changePort(hostPort string, port string) string {
 	host, _, err := net.SplitHostPort(hostPort)
 	if err != nil {
 		return hostPort

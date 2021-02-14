@@ -33,7 +33,6 @@ func TestCorsConfig(t *testing.T) {
 	assert.False(t, allowF("https://test.com"))
 	assert.False(t, allowF("https://other.com"))
 }
-
 func TestEmptyCorsConfigWithResponseHeaders(t *testing.T) {
 	mode.Set(mode.Prod)
 	serverConf := config.Configuration{}
@@ -61,10 +60,8 @@ func TestDevCorsConfig(t *testing.T) {
 	actual := CorsConfig(&serverConf)
 
 	assert.Equal(t, cors.Config{
-		AllowHeaders: []string{
-			"X-Gotify-Key", "Authorization", "Content-Type", "Upgrade", "Origin",
-			"Connection", "Accept-Encoding", "Accept-Language", "Host",
-		},
+		AllowHeaders: []string{"X-Gotify-Key", "Authorization", "Content-Type", "Upgrade", "Origin",
+			"Connection", "Accept-Encoding", "Accept-Language", "Host"},
 		AllowMethods:           []string{"GET", "POST", "DELETE", "OPTIONS", "PUT"},
 		MaxAge:                 12 * time.Hour,
 		AllowAllOrigins:        true,

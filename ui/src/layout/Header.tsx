@@ -118,11 +118,7 @@ class Header extends Component<IProps> {
                             <Highlight />
                         </IconButton>
 
-                        <a
-                            href="https://github.com/gotify/server"
-                            className={classes.link}
-                            target="_blank"
-                            rel="noopener noreferrer">
+                        <a href="https://github.com/gotify/server" className={classes.link}>
                             <IconButton color="inherit">
                                 <GitHubIcon />
                             </IconButton>

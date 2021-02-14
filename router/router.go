@@ -106,6 +106,7 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 		clientAuth.Use(authentication.RequireClient())
 		app := clientAuth.Group("/application")
 		{
+
 			app.GET("", applicationHandler.GetApplications)
 
 			app.POST("", applicationHandler.CreateApplication)
@@ -118,6 +119,7 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 
 			tokenMessage := app.Group("/:id/message")
 			{
+
 				tokenMessage.GET("", messageHandler.GetMessagesWithApplication)
 
 				tokenMessage.DELETE("", messageHandler.DeleteMessageWithApplication)
@@ -126,6 +128,7 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 
 		client := clientAuth.Group("/client")
 		{
+
 			client.GET("", clientHandler.GetClients)
 
 			client.POST("", clientHandler.CreateClient)
@@ -137,6 +140,7 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 
 		message := clientAuth.Group("/message")
 		{
+
 			message.GET("", messageHandler.GetMessages)
 
 			message.DELETE("", messageHandler.DeleteMessages)

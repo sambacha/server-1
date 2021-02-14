@@ -10,3 +10,7 @@ coverage.txt
 config.yml
 data/
 images/
+.DS_Store
+*.tar.gz
+*.tar
+*.zip
